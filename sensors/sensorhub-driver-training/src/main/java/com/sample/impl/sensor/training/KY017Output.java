@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import org.vast.swe.SWEHelper;
 
 // pi4J imports
+import com.pi4j.io.gpio.digital.DigitalInput;
 import com.pi4j.io.gpio.digital.DigitalState;
 import com.pi4j.io.gpio.digital.DigitalStateChangeEvent;
 import com.pi4j.io.gpio.digital.DigitalStateChangeListener;
@@ -73,10 +74,10 @@ public class KY017Output extends AbstractSensorOutput<KY017Sensor> implements Di
 
         logger.debug("Initializing KY017Output");
 
-        // Get an instance of SWE Factory suitable to build components
+        // get instance of SWE Factory suitable to build components
         SWEHelper sweFactory = new SWEHelper();
 
-        // TODO: Create data record description
+        // define data structure
         dataStruct = sweFactory.createRecord()
                 .name(SENSOR_OUTPUT_NAME)
                 .label(SENSOR_OUTPUT_LABEL)
@@ -88,12 +89,35 @@ public class KY017Output extends AbstractSensorOutput<KY017Sensor> implements Di
                         .description("Time of data collection"))
                 .addField("isTilted", sweFactory.createBoolean()
                         .label("Is Tilted"))
-                        .definition(SWEHelper.getPropertyUri("tilted"))
+                        .definition(SWEHelper.getPropertyUri("tilted"))  // sensorML property name
                 .build();
 
         dataEncoding = sweFactory.newTextEncoding(",", "\n");
 
         logger.debug("Initializing KY017Output Complete");
+
+        // get initial state
+        // TODO: retrieve data on module restart
+        DigitalInput inputPin = parentSensor.getInputPin();
+//        System.out.println(inputPin.state());
+        if (inputPin != null) {
+            DigitalState currentState = inputPin.state();
+            sensorDetectionReading = currentState == DigitalState.LOW;
+
+            DataBlock dataBlock = dataStruct.createDataBlock();
+            double timestamp = System.currentTimeMillis() / 1000d;
+
+            dataBlock.setDoubleValue(0, timestamp);
+            dataBlock.setBooleanValue(1, sensorDetectionReading);
+
+            latestRecord = dataBlock;
+            latestRecordTime = System.currentTimeMillis();
+
+            logger.debug("Initial reading isTilted: " + sensorDetectionReading);
+            eventHandler.publish(new DataEvent(latestRecordTime, KY017Output.this, dataBlock));
+
+            inputPin.addListener(this);
+        }
     }
 
     /**
@@ -134,19 +158,16 @@ public class KY017Output extends AbstractSensorOutput<KY017Sensor> implements Di
         return accumulator / (double) MAX_NUM_TIMING_SAMPLES;
     }
 
-    // TODO: get initial reading
-
     @Override
     public void onDigitalStateChange(DigitalStateChangeEvent digitalStateChangeEvent) {
 
-        logger.debug("onDigitalStateChange");
-        // GET BOOLEAN READING FOR SENSOR
+        // tilted if signal is LOW
         sensorDetectionReading = digitalStateChangeEvent.state() == DigitalState.LOW;
 
-        // The below code is template code for OSH
         DataBlock dataBlock;
         dataBlock = dataStruct.createDataBlock();
 
+        // replace existing data block
 //        if (latestRecord == null) {
 //            dataBlock = dataStruct.createDataBlock();
 //            dataBlock.setDoubleValue(0, System.currentTimeMillis() / 1000d);
@@ -171,10 +192,9 @@ public class KY017Output extends AbstractSensorOutput<KY017Sensor> implements Di
         dataBlock.setBooleanValue(1, sensorDetectionReading);
 
         latestRecord = dataBlock;
+        latestRecordTime = System.currentTimeMillis();
 
         logger.debug("Publishing isTilted: " + sensorDetectionReading);
         eventHandler.publish(new DataEvent(latestRecordTime, KY017Output.this, dataBlock));
-
-        latestRecordTime = System.currentTimeMillis();
     }
 }

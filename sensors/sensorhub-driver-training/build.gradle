@@ -1,5 +1,5 @@
-description = 'Training Sensor'
-ext.details = "Digital Sensor from 37 in 1 Sensors Kit"
+description = 'KY017 Tilt Sensor'
+ext.details = "Digital Tilt Sensor - Tilted/Level"
 version = '0.0.0'
 
 dependencies {

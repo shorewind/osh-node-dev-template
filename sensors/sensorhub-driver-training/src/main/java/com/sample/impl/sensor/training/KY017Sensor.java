@@ -47,26 +47,27 @@ public class KY017Sensor extends AbstractSensorModule<KY017Config> {
         generateUniqueID("urn:osh:sensor:training", config.serialNumber);
         generateXmlID("TRAINING_SENSOR", config.serialNumber);
 
-        // TODO: Perform other initialization
         System.out.println("Creating KY017Sensor...");
 
-        // Create Pi4J Context
+        // initialize pi4j connection
         pi4j = Pi4J.newAutoContext();
-        // Create a DigitalInput Configuration
         DigitalInputConfig inputConfig = DigitalInput.newConfigBuilder(pi4j)
                 .id("KY017")
                 .name("KY017 Tilt Sensor")
                 .address(config.bcmPinNumber)
                 .build();
 
-        // CREATE A DigitalInput Instance using inputConfig configuration to store the Raspberry Pi's input
         digitalInput = pi4j.create(inputConfig);
         System.out.println("pi4j configuration complete...");
 
-        // Create and initialize output
+        // create and initialize output
         output = new KY017Output(this);
         addOutput(output, false);
         output.doInit();
+    }
+
+    public DigitalInput getInputPin() {
+        return digitalInput;
     }
 
     @Override
@@ -77,11 +78,10 @@ public class KY017Sensor extends AbstractSensorModule<KY017Config> {
             // Allocate necessary resources and start outputs
 //            output.doStart();
             System.out.println("Listening to KY017Sensor...");
-            // Add listener requires a Digital State Change Listener to register an object. Bind that to Output class
+            // bind digital state change listener on input to output
             digitalInput.addListener(output);
         }
 
-        // TODO: Perform other startup procedures
     }
 
     @Override
@@ -92,13 +92,12 @@ public class KY017Sensor extends AbstractSensorModule<KY017Config> {
             pi4j.shutdown();
         }
 
-        // TODO: Perform other shutdown procedures
     }
 
     @Override
     public boolean isConnected() {
 
-        // Determine if sensor is connected
+        // determine if sensor is connected
         return output.isAlive();
     }
 }

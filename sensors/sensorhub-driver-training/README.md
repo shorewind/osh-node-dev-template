@@ -1,6 +1,6 @@
-# [NAME]
+# Training Sensor
 
-Sensor adapter for [NAME].
+Sensor adapter for KY017 Tilt Sensor.
 
 ## Configuration
 
